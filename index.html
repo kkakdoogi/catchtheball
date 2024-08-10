@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shooting Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #87CEEB, #f0f0f0); /* 파란색과 흰색 구름 배경 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background-color: #fff;
+            border: 2px solid #000;
+            overflow: hidden;
+        }
+        .target {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: blue; /* 공의 색상을 파란색으로 변경 */
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #timer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        button {
+            position: absolute;
+            bottom: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #startButton {
+            left: 10px;
+        }
+        #resetButton {
+            left: 200px; /* 시작 버튼과의 간격을 넓힘 */
+            background-color: #dc3545;
+        }
+        #resetButton:hover {
+            background-color: #c82333;
+        }
+        .game-over, .game-win {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: blue; /* 파란색 글씨 */
+            background-color: #fff; /* 흰색 배경 */
+            border: 2px solid blue; /* 파란색 테두리 */
+            padding: 20px;
+            border-radius: 15px; /* 둥근 모서리 */
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <div class="score" id="score">Score: 0</div>
+        <div id="timer">Time: 17</div>
+        <button id="startButton" onclick="startGame()">Start Game</button>
+        <button id="resetButton" onclick="resetGame()">Reset Game</button>
+        <div id="gameOverMessage" class="game-over">Game OVER!</div>
+        <div id="gameWinMessage" class="game-win">YOU WIN!! >.<</div>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameInterval;
+        let timerInterval;
+        let isGameRunning = false;
+        let timeLeft = 17; // Time limit in seconds
+
+        function startGame() {
+            if (isGameRunning) return; // 이미 게임이 진행 중인 경우 아무 작업도 하지 않음
+
+            score = 0;
+            timeLeft = 17; // Reset time
+            document.getElementById('score').textContent = 'Score: ' + score;
+            document.getElementById('timer').textContent = 'Time: ' + timeLeft;
+
+            // Clear existing targets and hide the game messages
+            document.querySelectorAll('.target').forEach(target => target.remove());
+            document.getElementById('gameOverMessage').style.display = 'none';
+            document.getElementById('gameWinMessage').style.display = 'none';
+
+            // Start the game
+            isGameRunning = true;
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(createTarget, 500); // 공의 나타나는 간격을 500ms로 설정
+            
+            // Start the timer
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000); // Update the timer every second
+        }
+
+        function createTarget() {
+            if (!isGameRunning) return; // 게임이 진행 중이 아닌 경우 함수 종료
+
+            const gameContainer = document.querySelector('.game-container');
+            const target = document.createElement('div');
+            target.className = 'target';
+
+            // Calculate valid positions avoiding buttons
+            const startButton = document.getElementById('startButton');
+            const resetButton = document.getElementById('resetButton');
+            
+            let left, top;
+            const startButtonRect = startButton.getBoundingClientRect();
+            const resetButtonRect = resetButton.getBoundingClientRect();
+            const containerRect = gameContainer.getBoundingClientRect();
+
+            do {
+                left = Math.random() * (containerRect.width - 50) + 'px';
+                top = Math.random() * (containerRect.height - 50) + 'px';
+            } while (isOverlap(left, top, startButtonRect) || isOverlap(left, top, resetButtonRect));
+
+            target.style.left = left;
+            target.style.top = top;
+            target.onclick = function() {
+                score += 10;
+                document.getElementById('score').textContent = 'Score: ' + score;
+                this.remove();
+                if (score >= 130) { // 점수 목표를 130으로 변경
+                    endGame(true);
+                }
+            };
+            gameContainer.appendChild(target);
+
+            // Reduce the time before the target disappears
+            setTimeout(() => {
+                if (target.parentElement) {
+                    target.remove();
+                }
+            }, 1000); // 공이 1000ms 후에 사라짐
+        }
+
+        function isOverlap(left, top, rect) {
+            const targetRect = {
+                left: parseFloat(left),
+                top: parseFloat(top),
+                right: parseFloat(left) + 50,
+                bottom: parseFloat(top) + 50
+            };
+            return !(targetRect.right < rect.left ||
+                     targetRect.left > rect.right ||
+                     targetRect.bottom < rect.top ||
+                     targetRect.top > rect.bottom);
+        }
+
+        function updateTimer() {
+            if (timeLeft <= 0) {
+                endGame(false);
+                return;
+            }
+            timeLeft--;
+            document.getElementById('timer').textContent = 'Time: ' + timeLeft;
+        }
+
+        function endGame(isWin) {
+            clearInterval(gameInterval);
+            clearInterval(timerInterval);
+            document.querySelectorAll('.target').forEach(target => target.remove());
+
+            if (isWin) {
+                document.getElementById('gameWinMessage').style.display = 'block';
+            } else {
+                document.getElementById('gameOverMessage').style.display = 'block';
+            }
+
+            isGameRunning = false;
+        }
+
+        function resetGame() {
+            clearInterval(gameInterval);
+            clearInterval(timerInterval);
+            document.querySelectorAll('.target').forEach(target => target.remove());
+            document.getElementById('gameOverMessage').style.display = 'none';
+            document.getElementById('gameWinMessage').style.display = 'none';
+            score = 0;
+            timeLeft = 17;
+            document.getElementById('score').textContent = 'Score: ' + score;
+            document.getElementById('timer').textContent = 'Time: ' + timeLeft;
+            isGameRunning = false;
+        }
+    </script>
+</body>
+</html>
